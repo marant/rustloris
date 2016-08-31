@@ -61,9 +61,8 @@ fn args_to_attack_opts(args :Arguments) -> Result<AttackOptions, net::AddrParseE
     })
 }
 
-// Kinda pointless for now, but turn AttackOptions.target to a proper URL later (it shouldn't
-// contain the port number as it currently does). Make it possible to add custom HTTP headers as
-// well
+// Kinda pointless for now, but turn AttackOptions.target to a proper URL later. Make it possible
+// to add custom HTTP headers as well
 fn construct_header(args :&Arguments) -> String {
     format!("GET {} HTTP/1.1\r\nHost: {}\r\n{}", "/", args.arg_target.as_str(), "")
 }
