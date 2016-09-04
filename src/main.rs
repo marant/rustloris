@@ -78,7 +78,7 @@ fn construct_target<'a>(target :String) -> Result<Target, Box<Error>> {
     let host = try!(target_url.host_str()
                     .ok_or(io::Error::new(io::ErrorKind::Other, "no host"))
                     .map(|h| h.to_string()));
-    let port = try!(target_url.port().ok_or(io::Error::new(io::ErrorKind::Other, "no port")));
+    let port = target_url.port().unwrap_or(80);
     let path = target_url.path().to_string();
     Result::Ok(
         Target {
