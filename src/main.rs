@@ -91,7 +91,7 @@ fn construct_target<'a>(target :String) -> Result<Target, Box<Error>> {
 // Kinda pointless for now, but turn AttackOptions.target to a proper URL later. Make it possible
 // to add custom HTTP headers as well
 fn construct_header(target :&Target) -> String {
-    let hostport = target.host.clone()+":"+target.port.to_string().as_str();
+    let hostport = format!("{}:{}", target.host.clone(), target.port.to_string());
     format!("GET {} HTTP/1.1\r\nHost: {}\r\n{}", target.path.as_str(), hostport.as_str(), "")
 }
 
